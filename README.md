@@ -1,0 +1,294 @@
+# tfmodule-google-global-lb-backend
+
+A Terraform module for creating and managing Google Cloud Global Load Balancer Backend Services with integrated health checks. This module provides a flexible and comprehensive solution for configuring backend services that support various load balancing schemes, multiple backend types (Instance Groups and Network Endpoint Groups), and customizable health check configurations.
+
+## Features
+
+- **Multiple Health Check Protocols**: Support for TCP, HTTP, and HTTPS health checks with comprehensive configuration options
+- **Flexible Backend Configuration**: Compatible with both Instance Groups and Network Endpoint Groups (NEGs)
+- **Load Balancing Schemes**: Support for EXTERNAL, EXTERNAL_MANAGED, INTERNAL_MANAGED, and INTERNAL_SELF_MANAGED schemes
+- **Advanced Traffic Management**: Connection draining, session affinity, and capacity scaling options
+- **Health Check Logging**: Optional logging for health check results
+- **Rate Limiting**: Configurable rate limits per endpoint (NEGs) or per instance (Instance Groups)
+- **Dynamic Configuration**: Health checks are dynamically created based on protocol type
+- **Production-Ready**: Comprehensive validation and support for enterprise use cases
+
+## Usage
+
+### Basic Example with HTTP Health Check and Instance Group
+```hcl
+module "global_lb_backend" {
+  source = "path/to/tfmodule-google-global-lb-backend"
+
+  project_id             = "my-gcp-project"
+  name                   = "web-backend-service"
+  ip_protocol            = "TCP"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+
+  health_check = {
+    type               = "http"
+    port               = 80
+    request_path       = "/health"
+    check_interval_sec = 10
+    timeout_sec        = 5
+    healthy_threshold  = 2
+    unhealthy_threshold = 3
+    enable_log         = true
+  }
+
+  backends = [
+    {
+      group           = "projects/my-gcp-project/zones/us-central1-a/instanceGroups/web-ig"
+      balancing_mode  = "RATE"
+      max_rate_per_instance = 100
+      capacity_scaler = 1.0
+    }
+  ]
+
+  session_affinity = "NONE"
+  connection_draining_timeout_sec = 300
+}
+```
+
+### HTTPS Health Check with Multiple Instance Groups
+```hcl
+module "secure_backend" {
+  source = "path/to/tfmodule-google-global-lb-backend"
+
+  project_id             = "my-gcp-project"
+  name                   = "secure-backend-service"
+  ip_protocol            = "TCP"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+
+  health_check = {
+    type                = "https"
+    port                = 443
+    request_path        = "/api/health"
+    host                = "api.example.com"
+    check_interval_sec  = 15
+    timeout_sec         = 10
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+    proxy_header        = "PROXY_V1"
+    enable_log          = true
+  }
+
+  backends = [
+    {
+      group           = "projects/my-gcp-project/zones/us-central1-a/instanceGroups/api-ig-1"
+      balancing_mode  = "UTILIZATION"
+      capacity_scaler = 1.0
+      max_rate_per_instance = 1000
+    },
+    {
+      group           = "projects/my-gcp-project/zones/us-east1-b/instanceGroups/api-ig-2"
+      balancing_mode  = "UTILIZATION"
+      capacity_scaler = 0.8
+      max_rate_per_instance = 1000
+    }
+  ]
+
+  session_affinity = "CLIENT_IP"
+  connection_draining_timeout_sec = 600
+}
+```
+
+### TCP Health Check with Network Endpoint Groups (NEGs)
+```hcl
+module "tcp_backend_neg" {
+  source = "path/to/tfmodule-google-global-lb-backend"
+
+  project_id             = "my-gcp-project"
+  name                   = "tcp-backend-service"
+  ip_protocol            = "TCP"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+
+  health_check = {
+    type                = "tcp"
+    port                = 8080
+    request             = "health check"
+    response            = "ok"
+    check_interval_sec  = 5
+    timeout_sec         = 3
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    enable_log          = false
+  }
+
+  backends = [
+    {
+      group           = "projects/my-gcp-project/zones/us-central1-a/networkEndpointGroups/app-neg-1"
+      balancing_mode  = "RATE"
+      max_rate_per_endpoint = 10
+      capacity_scaler = 1.0
+    },
+    {
+      group           = "projects/my-gcp-project/zones/us-west1-a/networkEndpointGroups/app-neg-2"
+      balancing_mode  = "RATE"
+      max_rate_per_endpoint = 10
+      capacity_scaler = 1.0
+    }
+  ]
+
+  session_affinity = "NONE"
+}
+```
+
+### Internal Load Balancing with Custom Port Name
+```hcl
+module "internal_backend" {
+  source = "path/to/tfmodule-google-global-lb-backend"
+
+  project_id             = "my-gcp-project"
+  name                   = "internal-backend-service"
+  ip_protocol            = "TCP"
+  load_balancing_scheme  = "INTERNAL_MANAGED"
+
+  health_check = {
+    type                = "http"
+    port_name           = "http-health"
+    request_path        = "/healthz"
+    check_interval_sec  = 10
+    timeout_sec         = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    enable_log          = true
+  }
+
+  backends = [
+    {
+      group           = "projects/my-gcp-project/zones/us-central1-a/instanceGroups/internal-ig"
+      balancing_mode  = "CONNECTION"
+      capacity_scaler = 1.0
+    }
+  ]
+
+  session_affinity = "CLIENT_IP"
+  connection_draining_timeout_sec = 180
+}
+```
+
+### Multi-Region Backend with Advanced Configuration
+```hcl
+module "global_multi_region_backend" {
+  source = "path/to/tfmodule-google-global-lb-backend"
+
+  project_id             = "my-gcp-project"
+  name                   = "global-app-backend"
+  ip_protocol            = "TCP"
+  load_balancing_scheme  = "EXTERNAL_MANAGED"
+
+  health_check = {
+    type                = "https"
+    port                = 443
+    request_path        = "/api/v1/health"
+    host                = "app.example.com"
+    check_interval_sec  = 10
+    timeout_sec         = 5
+    healthy_threshold   = 3
+    unhealthy_threshold = 2
+    proxy_header        = "PROXY_V1"
+    response            = "healthy"
+    enable_log          = true
+  }
+
+  backends = [
+    {
+      group              = "projects/my-gcp-project/zones/us-central1-a/instanceGroups/app-us-central"
+      balancing_mode     = "RATE"
+      max_rate_per_instance = 500
+      capacity_scaler    = 1.0
+    },
+    {
+      group              = "projects/my-gcp-project/zones/europe-west1-b/instanceGroups/app-europe"
+      balancing_mode     = "RATE"
+      max_rate_per_instance = 500
+      capacity_scaler    = 1.0
+    },
+    {
+      group              = "projects/my-gcp-project/zones/asia-east1-a/instanceGroups/app-asia"
+      balancing_mode     = "RATE"
+      max_rate_per_instance = 500
+      capacity_scaler    = 0.9
+    }
+  ]
+
+  session_affinity = "CLIENT_IP"
+  connection_draining_timeout_sec = 300
+}
+```
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| project_id | The GCP project ID | `string` | n/a | yes |
+| name | Name for the backend service and health check | `string` | n/a | yes |
+| ip_protocol | IP protocol for the backend service (TCP, UDP, ESP, AH, SCTP, or ICMP) | `string` | n/a | yes |
+| health_check | Health check configuration object | `object` | n/a | yes |
+| backends | List of backend configurations with group, balancing_mode, capacity_scaler, and rate limits | `list(any)` | n/a | yes |
+| load_balancing_scheme | Load balancing scheme (EXTERNAL, EXTERNAL_MANAGED, INTERNAL_MANAGED, or INTERNAL_SELF_MANAGED) | `string` | `"EXTERNAL_MANAGED"` | no |
+| session_affinity | Session affinity for backends (NONE, CLIENT_IP) | `string` | `"NONE"` | no |
+| connection_draining_timeout_sec | Time in seconds to drain connections before removing backends | `number` | `null` | no |
+
+### Health Check Object Structure
+
+| Field | Description | Type | Default | Required |
+|-------|-------------|------|---------|:--------:|
+| type | Health check protocol type (tcp, http, or https) | `string` | n/a | yes |
+| port | Port number for health check | `number` | n/a | no* |
+| port_name | Named port for health check (alternative to port) | `string` | n/a | no* |
+| check_interval_sec | How often to perform health check (in seconds) | `number` | `5` | no |
+| timeout_sec | Health check timeout (in seconds) | `number` | `5` | no |
+| healthy_threshold | Number of consecutive successes required to mark backend healthy | `number` | `2` | no |
+| unhealthy_threshold | Number of consecutive failures required to mark backend unhealthy | `number` | `2` | no |
+| request_path | Request path for HTTP/HTTPS health checks | `string` | n/a | no** |
+| host | Host header for HTTP/HTTPS health checks | `string` | n/a | no |
+| request | Request string for TCP health checks | `string` | n/a | no |
+| response | Expected response string | `string` | n/a | no |
+| proxy_header | Proxy header type (NONE or PROXY_V1) | `string` | `"NONE"` | no |
+| enable_log | Enable health check logging | `bool` | `false` | no |
+
+\* Either `port` or `port_name` must be specified  
+\*\* Required for HTTP and HTTPS health check types
+
+### Backend Object Structure
+
+| Field | Description | Type | Required |
+|-------|-------------|------|:--------:|
+| group | Full URL of the backend group (Instance Group or NEG) | `string` | yes |
+| balancing_mode | Balancing mode (RATE, UTILIZATION, CONNECTION) | `string` | no |
+| capacity_scaler | Multiplier for backend capacity (0.0 to 1.0) | `number` | no |
+| max_rate_per_instance | Maximum requests per second per instance (Instance Groups only) | `number` | no |
+| max_rate_per_endpoint | Maximum requests per second per endpoint (NEGs only) | `number` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| backend_service_id | The ID of the backend service |
+| backend_service_self_link | The self_link of the backend service |
+| backend_service_name | The name of the backend service |
+| health_check_id | The ID of the health check |
+| health_check_self_link | The self_link of the health check |
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.5.0 |
+| google | >= 7.0.0, < 8.0.0 |
+| google-beta | >= 7.0.0, < 8.0.0 |
+
+## Notes
+
+- The module automatically detects whether backends are Instance Groups or Network Endpoint Groups based on the group URL and applies appropriate rate limiting parameters
+- Health checks are created dynamically based on the specified protocol type (tcp, http, or https)
+- Only one health check is created per backend service, matching the specified protocol type
+- For HTTPS health checks, ensure your backends support SSL/TLS connections
+- Session affinity with CLIENT_IP requires compatible load balancing schemes
+- Connection draining timeout helps ensure graceful shutdown of backends during updates
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history and changes.
