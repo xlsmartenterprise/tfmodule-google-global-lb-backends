@@ -12,6 +12,8 @@ A Terraform module for creating and managing Google Cloud Global Load Balancer B
 - **Rate Limiting**: Configurable rate limits per endpoint (NEGs) or per instance (Instance Groups)
 - **Dynamic Configuration**: Health checks are dynamically created based on protocol type
 - **Production-Ready**: Comprehensive validation and support for enterprise use cases
+- **Cloud Armor Integration**: Attach security policies (`security_policy`) directly to backend services
+- **Serverless NEG Support**: Full compatibility with Cloud Run and serverless NEGs using `is_serverless` flag and optional health checks
 
 ## Usage
 
@@ -225,8 +227,10 @@ module "global_multi_region_backend" {
 | project_id | The GCP project ID | `string` | n/a | yes |
 | name | Name for the backend service and health check | `string` | n/a | yes |
 | ip_protocol | IP protocol for the backend service (TCP, UDP, ESP, AH, SCTP, or ICMP) | `string` | n/a | yes |
-| health_check | Health check configuration object | `object` | n/a | yes |
+| health_check | Health check configuration object. Set to null for serverless NEGs | `object` | `null` | no |
 | backends | List of backend configurations with group, balancing_mode, capacity_scaler, and rate limits | `list(any)` | n/a | yes |
+| security_policy | The security policy (Cloud Armor) to associate with this backend service | `string` | `null` | no |
+| is_serverless | Explicit flag if this backend service is strictly for Serverless NEGs | `bool` | `false` | no |
 | load_balancing_scheme | Load balancing scheme (EXTERNAL, EXTERNAL_MANAGED, INTERNAL_MANAGED, or INTERNAL_SELF_MANAGED) | `string` | `"EXTERNAL_MANAGED"` | no |
 | session_affinity | Session affinity for backends (NONE, CLIENT_IP) | `string` | `"NONE"` | no |
 | connection_draining_timeout_sec | Time in seconds to drain connections before removing backends | `number` | `null` | no |

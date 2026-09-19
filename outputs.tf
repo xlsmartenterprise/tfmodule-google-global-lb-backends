@@ -15,7 +15,7 @@ output "backend_service_name" {
 
 output "health_check_id" {
   description = "The ID of the health check"
-  value       = coalescelist(
+  value = coalescelist(
     google_compute_health_check.tcp[*].id,
     google_compute_health_check.http[*].id,
     google_compute_health_check.https[*].id
@@ -24,7 +24,7 @@ output "health_check_id" {
 
 output "health_check_self_link" {
   description = "The self_link of the health check"
-  value       = coalescelist(
+  value = coalescelist(
     google_compute_health_check.tcp[*].self_link,
     google_compute_health_check.http[*].self_link,
     google_compute_health_check.https[*].self_link

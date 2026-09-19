@@ -9,7 +9,7 @@ variable "name" {
 }
 
 variable "health_check" {
-  description = "Health check to determine whether instances are responsive and able to do work"
+  description = "Health check to determine whether instances are responsive and able to do work. Set to null for serverless NEGs."
   type = object({
     type                = string
     check_interval_sec  = optional(number)
@@ -25,6 +25,19 @@ variable "health_check" {
     host                = optional(string)
     enable_log          = optional(bool)
   })
+  default = null
+}
+
+variable "security_policy" {
+  description = "The security policy (Cloud Armor) to associate with this backend service"
+  type        = string
+  default     = null
+}
+
+variable "is_serverless" {
+  description = "Explicit flag if this backend service is strictly for Serverless NEGs"
+  type        = bool
+  default     = false
 }
 
 variable "load_balancing_scheme" {
@@ -35,7 +48,7 @@ variable "load_balancing_scheme" {
 
 variable "ip_protocol" {
   description = "IP protocol for the forwarding rule (TCP, UDP, ESP, AH, SCTP, or ICMP)"
-  type        = string  
+  type        = string
 }
 
 variable "connection_draining_timeout_sec" {
